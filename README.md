@@ -107,7 +107,7 @@ exec(nargv[0], nargv);
 ```
 所以上面图中会有“**syscall exec**”的输出。  
 
-“**exec()**”会将进程的原始内存、页表释放，建立新进程的内存、页表等，然后去执行新进程。很显然这里的新进程是“**grep hello README**”，大意就是“去**README**文件中过滤出**hello**的字符串”。所以我们现在的执行流程到了“**user/grep.c**”。查看下面“**grep.c**”中“**main()**”函数的流程。  
+“**exec()**”会将进程的原始内存、页表释放，建立新进程的内存、页表等，然后去执行新进程。很显然这里的新进程是“**grep hello README**”，大意就是“去**README**文件中过滤出**hello**的字符串”。所以我们现在的执行流程到了“**user/grep.c**”。查看下面“**grep.c**”中“**main()**”函数的流程。可以着重看下注释。  
 ```
 void
 grep(char *pattern, int fd)

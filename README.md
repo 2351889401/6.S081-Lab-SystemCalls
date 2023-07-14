@@ -48,7 +48,7 @@ if(p->trace_num & (1<<num)) printf("%d: syscall %s -> %d\n", p->pid, syscall_nam
     wait(0);
   }
 ```
-主要是先“**fork1()**”子进程，然后“**runcmd()**”运行命令行指示的程序。显然输入命令行参数后，这里应当运行用户程序“**user/trace.c**”。  
+主要是先“**fork1()**”子进程，然后“**runcmd()**”运行命令行指示的程序。显然输入命令行参数“**trace 2147483647 grep hello README**”后，这里应当运行用户程序“**user/trace.c**”。  
    
 （2）“**user/trace.c**”中的主函数如下
 ```

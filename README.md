@@ -166,4 +166,102 @@ main(int argc, char *argv[])
 所以会依次执行“**open**”、“**read**”、“**close**”系统调用。（没有执行“**grep**”函数中的“**write**”系统调用是因为**README**文件里面没有“**hello**”）。  
 至此，分析完毕。  
   
-**2.** 
+**2.** 添加系统调用“**sysinfo()**”，调用该系统调用时，会将系统的即时信息返回给用户空间的地址（通过“**kernel/vm.c/copyout()**”将内核中的数据拷贝给用户空间的地址，这里的用意大概是为了下一节“**页表**”的内容做准备）  
+  
+（这里同样略去细节）主要给出修改的代码：  
+**kernel/proc.c**中增加函数“**get_unused_num()**”获取当前没有处于**UNUSED**状态的进程数量  
+```
+//收集有多少进程不处于UNUSED状态
+uint64 get_unused_num(void)
+{
+  // char *sstates[] = {
+  // [UNUSED]    "unused",
+  // [SLEEPING]  "sleep ",
+  // [RUNNABLE]  "runble",
+  // [RUNNING]   "run   ",
+  // [ZOMBIE]    "zombie"
+  // };
+  struct proc *p;
+  uint64 num = 0;
+  for(p=proc; p < &proc[NPROC]; p++) {
+    // printf("pid:%d state:%s\n", p->pid, sstates[p->state]);
+    acquire(&p->lock);
+    if(p->state == UNUSED) {
+      release(&p->lock);
+      continue;
+    }
+    else num++;
+    release(&p->lock);
+  }
+  // printf("totalnum is %d\n", num);
+  return num;
+}
+```
+
+**kernel/kalloc.c**中增加函数“**get_freemem()**”计算当前的空闲内存  
+这里有2种实现：第1种是最早实现的方式，当时不了解内存的信息，为了做出来，想了一些偏招（哈哈哈）；第2种是写这篇文章的时候写的，这时候实际上已经完成了5个实验了，对内存这块了解的更深刻了。  
+
+第1种的想法和下面注释写的一样：不知道怎么处理的情况下，就逐渐增加内存，直到不能再增加；结束后别忘了释放内存（因为当时大概看过“**growproc**”函数似乎和内存大小有关）
+```
+uint64 get_freemem(void)
+{
+  // printf("hello this is get freemem\n");
+  uint n = 0;
+
+  //怎么样去统计free memory? 模仿用户程序 逐渐增加当前进程的memory 直到不能再增加为止 之后不要忘了回退之前的内存增加的操作
+  while(growproc(PGSIZE) != -1) {
+    n += PGSIZE;
+  }
+
+  growproc(-n);
+
+  return n;
+}
+```
+第2种就很简单啦：直接链表遍历
+```
+uint64 get_freemem(void) {
+  uint n = 0;
+  struct run *r = kmem.freelist;
+
+  while(r) {
+    n += PGSIZE;
+    r = r->next;
+  }
+
+  return n;
+}
+```
+
+**kernel/sysproc.c**中增加系统调用函数“**sys_sysinfo()**”将内核获取到的当前系统信息传递给用户空间
+```
+uint64
+sys_sysinfo(void)
+{
+  struct proc *p;
+  struct sysinfo info;
+  uint64 num_process;
+  uint64 num_freemem;
+
+  // printf("hello this is sysinfo!\n");
+  num_process = get_unused_num();
+  num_freemem = get_freemem();
+
+  info.freemem = num_freemem;
+  info.nproc = num_process;
+
+  //首先需要获取用户程序提供的地址 进入内核前存储在a0(寄存器)里面
+  uint64 user_addr;
+  if(argaddr(0, &user_addr) < 0) return -1;
+
+  // printf("useraddr: %d\n", user_addr);
+
+  p = myproc();
+  if(copyout(p->pagetable, user_addr, (char *)&info, sizeof(struct sysinfo)) < 0) return -1;
+
+  return 0;
+}
+```
+至此，完成实验，结果如下：  
+这里具体的一些细节可以参考源码，难度不大，直接给出测试结果：  
+![](https://github.com/2351889401/6.S081-Lab-SystemCalls/blob/main/images/sysinfo.png)  

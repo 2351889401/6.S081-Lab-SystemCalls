@@ -263,5 +263,4 @@ sys_sysinfo(void)
 }
 ```
 至此，完成实验，结果如下：  
-这里具体的一些细节可以参考源码，难度不大，直接给出测试结果：  
 ![](https://github.com/2351889401/6.S081-Lab-SystemCalls/blob/main/images/sysinfo.png)  

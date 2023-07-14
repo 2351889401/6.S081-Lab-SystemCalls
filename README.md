@@ -3,11 +3,11 @@
 **1.** 增加系统调用“**trace()**”。如果一个进程调用了它，那么该进程之后调用的系统调用（如果在“**trace()**”中设置了被追踪）会被追踪。  
 
 （这里太细节的内容就略过了，可以参考源码）  
-**kernel/proc.h**中添加：
+**kernel/proc.h**中添加变量，保存要追踪的系统调用信息：
 ```
 int trace_num; //保存trace的系统调用的bit
 ```
-**kernel/sysproc.c**中添加函数“**sys_trace()**”：
+**kernel/sysproc.c**中添加函数“**sys_trace()**”为上面定义的变量赋值：
 ```
 uint64
 sys_trace(void)
@@ -19,11 +19,11 @@ sys_trace(void)
   return 0;
 }
 ```
-**kernel/proc.c**中的“**fork()**”中添加：
+**kernel/proc.c**中的“**fork()**”中添加下面的代码，为子进程的“**trace_num**”赋值，以使得子进程也可以追踪系统调用：
 ```
 np->trace_num = p->trace_num; // copy trace mask
 ```
-**kernel/syscall.c**中的“**syscall()**”中添加：
+**kernel/syscall.c**中的“**syscall()**”中添加如下的语句，输出追踪信息：
 ```
 if(p->trace_num & (1<<num)) printf("%d: syscall %s -> %d\n", p->pid, syscall_names[num], p->trapframe->a0);
 ```
